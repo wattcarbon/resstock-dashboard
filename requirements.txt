@@ -6,4 +6,4 @@ numpy>=1.20.0
 geopandas>=0.14.0
 folium>=0.15.0
 streamlit-folium>=0.15.0
-# sqlite3 is built into Python, no need to install separately 
+tqdm
