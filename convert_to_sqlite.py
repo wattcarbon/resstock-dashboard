@@ -10,6 +10,19 @@ import os
 from pathlib import Path
 from tqdm import tqdm
 
+# Distribution data (compact format for visualizations)
+# Configuration: Add column names here to automatically include them in distributions
+distribution_columns = [
+    'in_geometry_building_type_recs',
+    'in_heating_fuel', 
+    'in_water_heater_fuel',
+    'in_vintage',  # Add vintage distribution
+    # Add more columns here as needed:
+    # 'in_cooling_fuel',
+    # 'in_lighting_type',
+    # 'in_appliance_type',
+]
+
 def convert_parquet_to_sqlite(parquet_file='baseline.parquet', db_file='resstock.db'):
     """
     Convert parquet file to SQLite database with county-level summaries
@@ -110,6 +123,10 @@ def create_county_summary(df):
     pbar = tqdm(county_groups, desc="Processing counties", unit="county")
     
     for (county_id, county_name, state), group in pbar:
+        state_fips = county_id[1:3]     # '01'
+        county_fips = county_id[4:7]    # '000'
+        fips = f'0500000US{state_fips}{county_fips}'
+        
         # Update progress bar description with current county
         pbar.set_description(f"Processing {county_name}, {state}")
         pbar.set_postfix(buildings=len(group))
@@ -155,7 +172,22 @@ def create_county_summary(df):
             except:
                 avg_energy_burden = None
         
-        # Most common values (instead of full distributions)
+        
+        
+        # Generate distribution data for all configured columns
+        distribution_data = {}
+        
+        for col in distribution_columns:
+            if col in group.columns:
+                try:
+                    value_counts = group[col].value_counts()
+                    distribution_data[f"{col}_dist"] = ','.join([f"{k}:{v}" for k, v in value_counts.items()])
+                except Exception as e:
+                    distribution_data[f"{col}_dist"] = None
+            else:
+                distribution_data[f"{col}_dist"] = None
+        
+        # Most common values (for quick reference)
         most_common_building_type = None
         if 'in_geometry_building_type_recs' in group.columns:
             try:
@@ -180,6 +212,7 @@ def create_county_summary(df):
         # Create summary row
         summary_row = {
             'in_county': county_id,
+            'fips': fips,
             'in_county_name': county_name,
             'in_state': state,
             'building_count': building_count,
@@ -194,12 +227,28 @@ def create_county_summary(df):
             'most_common_water_heater_fuel': most_common_water_heater_fuel
         }
         
+        # Add all distribution data to summary row
+        summary_row.update(distribution_data)
+        
         summary_data.append(summary_row)
     
     # Create DataFrame
     summary_df = pd.DataFrame(summary_data)
     
     print(f"✅ Created summary for {len(summary_df)} counties")
+    print(f"📊 Summary table columns ({len(summary_df.columns)} total):")
+    
+    # Group columns by type for better readability
+    basic_cols = ['in_county', 'in_county_name', 'in_state', 'building_count', 'weighted_count']
+    avg_cols = [col for col in summary_df.columns if col.startswith('avg_')]
+    most_common_cols = [col for col in summary_df.columns if col.startswith('most_common_')]
+    dist_cols = [col for col in summary_df.columns if col.endswith('_dist')]
+    
+    print(f"   📍 Basic columns ({len(basic_cols)}): {', '.join(basic_cols)}")
+    print(f"   📊 Average columns ({len(avg_cols)}): {', '.join(avg_cols)}")
+    print(f"   🏆 Most common columns ({len(most_common_cols)}): {', '.join(most_common_cols)}")
+    print(f"   📈 Distribution columns ({len(dist_cols)}): {', '.join(dist_cols)}")
+    
     return summary_df
 
 if __name__ == "__main__":
@@ -213,5 +262,6 @@ if __name__ == "__main__":
         print("   • Energy consumption and cost metrics")
         print("   • Most common building types and fuel types")
         print("   • Average building characteristics")
+        print("   • Distribution data for: building types, heating fuel, water heater fuel, and vintage")
     else:
         print("\n❌ Conversion failed. Please check the error messages above.") 
