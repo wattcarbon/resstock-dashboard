@@ -26,15 +26,59 @@ An interactive Streamlit dashboard for exploring building energy data from the R
 ## Usage
 
 ### Setup and Run Dashboard
-1. Convert the parquet file to SQLite for better performance:
+
+The conversion script now uses Typer for command-line interface with separate commands:
+
+#### Option 1: Convert everything at once
+```bash
+python convert_to_sqlite.py all
+```
+
+#### Option 2: Convert step by step
+1. Convert the parquet file to SQLite for county data:
    ```bash
-   python convert_to_sqlite.py
+   python convert_to_sqlite.py counties
    ```
-2. Run the comparison dashboard:
+2. (Optional) Create loadshape summaries from S3 data:
+   ```bash
+   python convert_to_sqlite.py loadshape
+   ```
+
+#### Command Options
+- `counties` - Creates county_summary and county_building_summary tables
+- `loadshape` - Creates loadshape_summary table with hourly averages from S3
+- `all` - Runs both counties and loadshape conversions in sequence
+
+#### Additional Options
+- `--parquet-file` or `-p` - Specify parquet file path (default: baseline.parquet)
+- `--db-file` or `-d` - Specify database file path (default: resstock.db)
+- `--upgrades-file` or `-u` - Specify upgrades lookup file (default: upgrades_lookup.json)
+- `--state` or `-s` - Specify states to process for loadshape (can use multiple times, e.g., `--state PA --state CA`)
+- `--upgrade` - Specify upgrades to process for loadshape (can use multiple times, e.g., `--upgrade 0 --upgrade 1`)
+
+#### Examples
+```bash
+# Process specific states for loadshape data
+python convert_to_sqlite.py loadshape --state PA --state CA
+python convert_to_sqlite.py loadshape -s TX -s FL -s NY
+
+# Process specific upgrades for loadshape data (numeric upgrade IDs)
+python convert_to_sqlite.py loadshape --upgrade 0 --upgrade 1
+python convert_to_sqlite.py loadshape --upgrade 2 --upgrade 3
+
+# Combine state and upgrade filters
+python convert_to_sqlite.py loadshape --state PA --state CA --upgrade 0 --upgrade 1
+
+# With custom file paths
+python convert_to_sqlite.py counties --parquet-file mydata.parquet --db-file mydb.db
+python convert_to_sqlite.py loadshape --db-file mydb.db --upgrades-file myupgrades.json
+```
+
+3. Run the comparison dashboard:
    ```bash
    streamlit run app.py
    ```
-3. Open your browser and navigate to the URL shown in the terminal (typically `http://localhost:8501`)
+4. Open your browser and navigate to the URL shown in the terminal (typically `http://localhost:8501`)
 
 ## Data Structure
 
@@ -43,6 +87,11 @@ The dashboard uses the ResStock baseline dataset which contains:
 - Building characteristics (type, vintage, floor area, etc.)
 - Energy consumption data
 - Cost and energy burden metrics
+
+### Database Tables
+- `county_summary` - County-level aggregated data
+- `county_building_summary` - County and building type aggregated data
+- `loadshape_summary` - Hourly loadshape averages for all upgrade/state/building type combinations (includes total and emissions columns)
 
 ## Dashboard Sections
 
@@ -62,7 +111,6 @@ Each county dashboard includes:
 
 ### Side-by-Side Comparison
 - **Building Count Comparison**: Direct comparison with delta values
-- **Average Floor Area Comparison**: Size differences between counties
 - **Average Electricity Comparison**: Energy consumption differences
 - **Average Energy Burden Comparison**: Energy cost burden differences
 
