@@ -793,13 +793,16 @@ def main():
     if not available_columns:
         st.warning("⚠️ No loadshape data found in database. Please run `python convert_to_sqlite.py loadshape` to create loadshape summaries.")
     else:
-        # Get the selected states from the dashboard
+        # Get the selected states from the dashboard in the correct order
         selected_states = []
         if county1_data:
             selected_states.append(county1_data[1])  # county1_state
         if county2_data:
             selected_states.append(county2_data[1])  # county2_state
-        selected_states = list(set(selected_states))  # Remove duplicates
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        selected_states = [state for state in selected_states if not (state in seen or seen.add(state))]
         
         if selected_states:
             # Upgrade selector
