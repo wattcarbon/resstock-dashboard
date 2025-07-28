@@ -920,6 +920,40 @@ def main():
                         fig_electricity.update_xaxes(tickmode='linear', tick0=0, dtick=1, range=[0, 23])
                         
                         st.plotly_chart(fig_electricity, use_container_width=True)
+                        
+                        # Electricity savings chart
+                        electricity_savings = baseline_electricity_sum - upgrade_electricity_sum
+                        fig_electricity_savings = go.Figure()
+                        
+                        # Create bar chart with conditional colors
+                        colors = ['green' if val >= 0 else 'red' for val in electricity_savings.values]
+                        
+                        fig_electricity_savings.add_trace(go.Bar(
+                            x=electricity_savings.index,
+                            y=electricity_savings.values,
+                            name=f"Electricity Savings",
+                            marker_color=colors,
+                            opacity=0.7
+                        ))
+                        
+                        fig_electricity_savings.update_layout(
+                            title=f"Electricity Savings - {state}",
+                            xaxis_title="Hour of Day",
+                            yaxis_title="Electricity Savings (kWh)",
+                            height=250,
+                            showlegend=True,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="right",
+                                x=1
+                            )
+                        )
+                        
+                        fig_electricity_savings.update_xaxes(tickmode='linear', tick0=0, dtick=1, range=[0, 23])
+                        
+                        st.plotly_chart(fig_electricity_savings, use_container_width=True)
                     else:
                         st.warning(f"No electricity data available for {state}")
                     
@@ -995,6 +1029,40 @@ def main():
                         fig_fuel.update_xaxes(tickmode='linear', tick0=0, dtick=1, range=[0, 23])
                         
                         st.plotly_chart(fig_fuel, use_container_width=True)
+                        
+                        # Fuel savings chart
+                        fuel_savings = baseline_fuel_sum - upgrade_fuel_sum
+                        fig_fuel_savings = go.Figure()
+                        
+                        # Create bar chart with conditional colors
+                        colors = ['green' if val >= 0 else 'red' for val in fuel_savings.values]
+                        
+                        fig_fuel_savings.add_trace(go.Bar(
+                            x=fuel_savings.index,
+                            y=fuel_savings.values,
+                            name=f"{selected_fuel.replace('_', ' ').title()} Savings",
+                            marker_color=colors,
+                            opacity=0.7
+                        ))
+                        
+                        fig_fuel_savings.update_layout(
+                            title=f"{selected_fuel.replace('_', ' ').title()} Savings - {state}",
+                            xaxis_title="Hour of Day",
+                            yaxis_title=f"{selected_fuel.replace('_', ' ').title()} Savings (kWh)",
+                            height=250,
+                            showlegend=True,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="right",
+                                x=1
+                            )
+                        )
+                        
+                        fig_fuel_savings.update_xaxes(tickmode='linear', tick0=0, dtick=1, range=[0, 23])
+                        
+                        st.plotly_chart(fig_fuel_savings, use_container_width=True)
                     else:
                         st.warning(f"No {selected_fuel} data available for {state}")
                     
@@ -1070,6 +1138,40 @@ def main():
                         fig_emissions.update_xaxes(tickmode='linear', tick0=0, dtick=1, range=[0, 23])
                         
                         st.plotly_chart(fig_emissions, use_container_width=True)
+                        
+                        # Emissions savings chart
+                        emissions_savings = baseline_emissions_sum - upgrade_emissions_sum
+                        fig_emissions_savings = go.Figure()
+                        
+                        # Create bar chart with conditional colors
+                        colors = ['green' if val >= 0 else 'red' for val in emissions_savings.values]
+                        
+                        fig_emissions_savings.add_trace(go.Bar(
+                            x=emissions_savings.index,
+                            y=emissions_savings.values,
+                            name=f"Emissions Savings",
+                            marker_color=colors,
+                            opacity=0.7
+                        ))
+                        
+                        fig_emissions_savings.update_layout(
+                            title=f"Emissions Savings ({selected_emissions.replace('_', ' ').title()}) - {state}",
+                            xaxis_title="Hour of Day",
+                            yaxis_title="CO2e Emissions Savings (kg)",
+                            height=250,
+                            showlegend=True,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=1.02,
+                                xanchor="right",
+                                x=1
+                            )
+                        )
+                        
+                        fig_emissions_savings.update_xaxes(tickmode='linear', tick0=0, dtick=1, range=[0, 23])
+                        
+                        st.plotly_chart(fig_emissions_savings, use_container_width=True)
                     else:
                         st.warning(f"No emissions data available for {state}")
                     
