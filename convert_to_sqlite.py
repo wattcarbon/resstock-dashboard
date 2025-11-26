@@ -635,7 +635,7 @@ def counties(
         print("\n❌ County conversion failed. Please check the error messages above.")
         raise typer.Exit(1)
 
-def create_building_lookup(parquet_file='baseline.parquet', db_file='resstock.db'):
+def create_building_lookup(parquet_file='baseline.parquet', db_file='resstock_building_lookup.db'):
     """
     Create a building lookup table with bldg_id, state, and building_type from parquet file
     
@@ -733,7 +733,7 @@ def create_building_lookup(parquet_file='baseline.parquet', db_file='resstock.db
 @app.command()
 def building_lookup(
     parquet_file: str = typer.Option('baseline.parquet', '--parquet-file', '-p', help="Path to the parquet file"),
-    db_file: str = typer.Option('resstock.db', '--db-file', '-d', help="Path to the SQLite database")
+    db_file: str = typer.Option('resstock_building_lookup.db', '--db-file', '-d', help="Path to the SQLite database")
 ):
     """Create a building lookup table with bldg_id, state, and building_type from parquet file"""
     success = create_building_lookup(parquet_file, db_file)
