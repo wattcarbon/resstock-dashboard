@@ -121,17 +121,17 @@ def convert_parquet_to_sqlite(parquet_file='baseline.parquet', db_file='resstock
         
         conn.close()
         
-        print(f"✅ Successfully converted to SQLite!")
-        print(f"📊 Database stats:")
+        print("✅ Successfully converted to SQLite!")
+        print("📊 Database stats:")
         print(f"   - Total counties: {total_counties:,}")
         print(f"   - Total states: {total_states}")
         print(f"   - Total buildings: {total_buildings:,}")
         print(f"   - Total county-building type combinations: {total_county_building_combinations:,}")
         print(f"   - Total building types: {total_building_types}")
-        print(f"   - Top counties by building count:")
+        print("   - Top counties by building count:")
         for county, state, count in sample_counties:
             print(f"     • {county}, {state}: {count:,} buildings")
-        print(f"   - Building types found:")
+        print("   - Building types found:")
         for building_type, count in sample_building_types:
             print(f"     • {building_type}: {count:,} combinations")
         print(f"   - Database file: {db_file}")
@@ -633,6 +633,120 @@ def counties(
         print("   • Distribution data by building type")
     else:
         print("\n❌ County conversion failed. Please check the error messages above.")
+        raise typer.Exit(1)
+
+def create_building_lookup(parquet_file='baseline.parquet', db_file='resstock.db'):
+    """
+    Create a building lookup table with bldg_id, state, and building_type from parquet file
+    
+    Args:
+        parquet_file (str): Path to the parquet file
+        db_file (str): Path to the SQLite database
+    """
+    print(f"📋 Creating building lookup table from {parquet_file}...")
+    
+    # Check if parquet file exists
+    if not os.path.exists(parquet_file):
+        print(f"❌ Error: {parquet_file} not found!")
+        return False
+    
+    try:
+        # Load parquet file
+        print("📖 Loading parquet file...")
+        df = pd.read_parquet(parquet_file)
+        
+        # Reset index to make bldg_id a regular column
+        df = df.reset_index()
+        
+        # Replace periods with underscores in column names for SQLite compatibility
+        print("🔄 Cleaning column names...")
+        df.columns = df.columns.str.replace('.', '_')
+        
+        print(f"✅ Loaded {len(df):,} rows")
+        
+        # Extract only the columns we need
+        # Check which columns exist and add them
+        
+        # Create lookup dataframe
+        building_lookup = df[['bldg_id', 'in_state', 'in_geometry_building_type_recs', 'in_county']].copy()
+        
+        # Rename columns to simpler names
+        rename_map = {"bldg_id": "bldg_id", "in_state": "state", "in_geometry_building_type_recs": "building_type", "in_county": "county"}
+        building_lookup = building_lookup.rename(columns=rename_map)
+        
+        # Connect to database
+        print("🗄️ Writing to SQLite database...")
+        conn = sqlite3.connect(db_file)
+        
+        # Write building lookup to SQLite
+        building_lookup.to_sql('building_lookup', conn, if_exists='replace', index=False)
+        
+        # Create indexes for better query performance
+        print("⚡ Creating indexes...")
+        cursor = conn.cursor()
+        
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_bldg_id ON building_lookup (bldg_id)")
+        # Check if columns exist after renaming
+        cursor.execute("PRAGMA table_info(building_lookup)")
+        columns_info = cursor.fetchall()
+        column_names = [col[1] for col in columns_info]
+        
+        if 'state' in column_names:
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_state ON building_lookup (state)")
+        if 'building_type' in column_names:
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_building_type ON building_lookup (building_type)")
+        if 'state' in column_names and 'building_type' in column_names:
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_state_building_type ON building_lookup (state, building_type)")
+        
+        conn.commit()
+        
+        # Get stats
+        cursor.execute("SELECT COUNT(*) FROM building_lookup")
+        total_buildings = cursor.fetchone()[0]
+        
+        total_states = 0
+        total_building_types = 0
+        if 'state' in column_names:
+            cursor.execute("SELECT COUNT(DISTINCT state) FROM building_lookup")
+            total_states = cursor.fetchone()[0]
+        if 'building_type' in column_names:
+            cursor.execute("SELECT COUNT(DISTINCT building_type) FROM building_lookup")
+            total_building_types = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        print("✅ Successfully created building lookup table!")
+        print("📊 Building lookup stats:")
+        print(f"   - Total buildings: {total_buildings:,}")
+        print(f"   - Total states: {total_states}")
+        print(f"   - Total building types: {total_building_types}")
+        print(f"   - Database file: {db_file}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error during building lookup creation: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+@app.command()
+def building_lookup(
+    parquet_file: str = typer.Option('baseline.parquet', '--parquet-file', '-p', help="Path to the parquet file"),
+    db_file: str = typer.Option('resstock.db', '--db-file', '-d', help="Path to the SQLite database")
+):
+    """Create a building lookup table with bldg_id, state, and building_type from parquet file"""
+    success = create_building_lookup(parquet_file, db_file)
+    
+    if success:
+        print("\n🎉 Building lookup creation complete!")
+        print("📊 The building_lookup table includes:")
+        print("   • bldg_id - Building ID")
+        print("   • state - State abbreviation")
+        print("   • building_type - Building type")
+        print("   • Indexed for fast querying")
+    else:
+        print("\n❌ Building lookup creation failed. Please check the error messages above.")
         raise typer.Exit(1)
 
 @app.command()
