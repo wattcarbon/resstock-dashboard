@@ -17,7 +17,7 @@ from io import BytesIO, StringIO
 from hourly import create_and_fit_hourly_model
 
 DB_LOCAL_PATH = "resstock_building_lookup.db"
-DB_URL = "https://wattcarbon-sandbox-resstock.s3.amazonaws.com/resstock.db"
+DB_URL = "https://wattcarbon-sandbox-resstock.s3.amazonaws.com/resstock_building_lookup.db"
 
 @st.cache_data
 def download_db():
